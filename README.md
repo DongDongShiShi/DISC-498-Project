@@ -3,7 +3,7 @@
 # Diffusion for PDE 
 
 Jiuzhou Chen， Dongwei Shi
-![DiffusionPDE](docs/architecture.jpg)
+![DiffusionPDE](docs/PDEdatavisu.jpg)
 
 ## Tasks
 
