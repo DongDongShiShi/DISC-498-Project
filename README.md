@@ -21,7 +21,7 @@ A formal table to summarize PDE types and grids from PDE Bench Paper：
 
 
 ### ODE/PDE Discovery Problem
-
+One potential goal of our project is, given PDE data (possibly with only partial observations available), to discover the underlying physical law (the PDE), particularly identifying the differential terms and their corresponding coefficients. Specifically, we aim to explore whether existing methods can be extended to handle scenarios with varying coefficients.
 
 
 
