@@ -75,8 +75,59 @@ class EDMLoss:
         weight = (sigma ** 2 + self.sigma_data ** 2) / (sigma * self.sigma_data) ** 2
         y, augment_labels = augment_pipe(images) if augment_pipe is not None else (images, None)
         n = torch.randn_like(y) * sigma
-        D_yn = net(y + n, sigma, labels, augment_labels=augment_labels)
+        noisy_input = y + n
+        D_yn = net(noisy_input, sigma, labels, augment_labels=augment_labels)
+
+        if torch.distributed.get_rank() == 0:
+            self.plot_counter += 1   # <-- update counter
+            if self.plot_counter % 100 == 0:   # <-- only every 100 times
+                import matplotlib.pyplot as plt
+                import os
+                pred = D_yn.detach().cpu().numpy()
+                gt = y.detach().cpu().numpy()
+                noisy = noisy_input.detach().cpu().numpy()
+
+                plt.figure(figsize=(8, 4))
+
+                plt.subplot(2, 3, 1)
+                plt.title('Pred ch0')
+                plt.imshow(pred[0, 0], cmap='viridis')
+                plt.axis('off')
+
+                plt.subplot(2, 3, 2)
+                plt.title('Pred ch1')
+                plt.imshow(pred[0, 1], cmap='viridis')
+                plt.axis('off')
+
+                plt.subplot(2, 3, 3)
+                plt.title('GT ch0')
+                plt.imshow(gt[0, 0], cmap='viridis')
+                plt.axis('off')
+
+                plt.subplot(2, 3, 4)
+                plt.title('GT ch1')
+                plt.imshow(gt[0, 1], cmap='viridis')
+                plt.axis('off')
+
+                plt.subplot(2, 3, 5)
+                plt.title('Noisy ch0')
+                plt.imshow(noisy[0, 0], cmap='viridis')
+                plt.axis('off')
+
+                plt.subplot(2, 3, 6)
+                plt.title('Noisy ch1')
+                plt.imshow(noisy[0, 1], cmap='viridis')
+                plt.axis('off')
+
+                plt.tight_layout()
+
+                # Save with a different name every time
+                save_path = os.path.join(os.getcwd(), f'training_debug_step_{self.plot_counter:06d}.png')
+                plt.savefig(save_path)
+                plt.close()
+                
         loss = weight * ((D_yn - y) ** 2)
+        print(loss.mean().item())
         return loss
 
 #----------------------------------------------------------------------------
