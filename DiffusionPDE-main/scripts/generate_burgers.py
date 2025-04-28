@@ -17,6 +17,27 @@ def random_sensor(k, grid_size, seed=0, device=torch.device('cuda')):
         index[:, i]=1
     return index
 
+def grid_sensors(k, grid_size, device=torch.device('cuda')):
+    '''Select roughly k points uniformly in a grid pattern.'''
+    stride = int((grid_size**2 / k)**0.5)
+    mask = torch.zeros((grid_size, grid_size), dtype=torch.float32).to(device)
+    for i in range(0, grid_size, stride):
+        for j in range(0, grid_size, stride):
+            mask[i, j] = 1
+    return mask
+
+def clustered_sensors(k, grid_size, cluster_center=(32, 32), cluster_std=10, device=torch.device('cuda')):
+    '''Select k points concentrated around a cluster center.'''
+    mask = torch.zeros((grid_size, grid_size), dtype=torch.float32).to(device)
+    np.random.seed(0)
+    x = np.random.normal(cluster_center[0], cluster_std, size=k)
+    y = np.random.normal(cluster_center[1], cluster_std, size=k)
+    x = np.clip(x, 0, grid_size-1).astype(int)
+    y = np.clip(y, 0, grid_size-1).astype(int)
+    for i in range(k):
+        mask[x[i], y[i]] = 1
+    return mask
+
 def get_burger_loss(u, u_GT, mask, device=torch.device('cuda')):
     """Return the loss of the Burgers' equation and the observation loss."""
     u = u.view(1, 1, 128, 128)
@@ -75,6 +96,9 @@ def generate_burgers(config):
     
     x_next = latents.to(torch.float64) * sigma_t_steps[0]
     selected_index = random_sensor(5, 128)
+
+    # selected_index = grid_sensor(5, 128)
+    # selected_index = clustered_index(5, 128, cluster_center=(32, 32))
     
     ############################ Sample the data ############################
     for i, (sigma_t_cur, sigma_t_next) in tqdm.tqdm(list(enumerate(zip(sigma_t_steps[:-1], sigma_t_steps[1:]))), unit='step'): # 0, ..., N-1
@@ -116,3 +140,8 @@ def generate_burgers(config):
     x_final = x_final.to('cpu').detach().numpy()
     np.save(f'burger-results.npy', x_final)
     print('Done.')
+
+    plt.imshow(x_final.squeeze())
+    plt.title('generated_u_steps')
+    plt.colorbar()
+    plt.show()
