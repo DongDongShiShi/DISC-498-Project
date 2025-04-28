@@ -1,4 +1,4 @@
-name: DiffusionPDE
+name: Diffusion_cse498
 channels:
   - pytorch
   - nvidia
