@@ -1,1 +1,0 @@
-from .hypersindy import HyperSINDy
