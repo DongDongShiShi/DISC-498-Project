@@ -29,11 +29,14 @@ for j in range(1, 6):
         # Combine them into a new array with a shape [H, W, 2]
         combined = np.stack((f1_transformed, f2_transformed), axis=-1)
 
+        # combined = zoom(combined, (32/128, 32/128, 1), order=1)   # change resolution to 32 * 32
+
         # Save the combined array to a new .npy file
         output_file_path = output_base_path.format(i+(j-1)*10000)
         np.save(output_file_path, combined)
-
+        
         assert combined.shape == (128, 128, 2)
+        # assert combined.shape == (32, 32, 2)
         if i % 500 == 0:
             print(f"Saved combined array for index {i} to {output_file_path}")
             print("Min:", combined.min(), "Max:", combined.max())
