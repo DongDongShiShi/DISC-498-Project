@@ -19,6 +19,27 @@ def random_index(k, grid_size, seed=0, device=torch.device('cuda')):
         mask[i] = 1
     return mask
 
+def grid_index(k, grid_size, device=torch.device('cuda')):
+    '''Select roughly k points uniformly in a grid pattern.'''
+    stride = int((grid_size**2 / k)**0.5)
+    mask = torch.zeros((grid_size, grid_size), dtype=torch.float32).to(device)
+    for i in range(0, grid_size, stride):
+        for j in range(0, grid_size, stride):
+            mask[i, j] = 1
+    return mask
+
+def clustered_index(k, grid_size, cluster_center=(32, 32), cluster_std=10, device=torch.device('cuda')):
+    '''Select k points concentrated around a cluster center.'''
+    mask = torch.zeros((grid_size, grid_size), dtype=torch.float32).to(device)
+    np.random.seed(0)
+    x = np.random.normal(cluster_center[0], cluster_std, size=k)
+    y = np.random.normal(cluster_center[1], cluster_std, size=k)
+    x = np.clip(x, 0, grid_size-1).astype(int)
+    y = np.clip(y, 0, grid_size-1).astype(int)
+    for i in range(k):
+        mask[x[i], y[i]] = 1
+    return mask
+
 def get_darcy_loss(a, u, a_GT, u_GT, a_mask, u_mask, device=torch.device('cuda')):
     """Return the loss of the Darcy Flow equation and the observation loss."""
     deriv_x = torch.tensor([[1, 0, -1]], dtype=torch.float64, device=device).view(1, 1, 1, 3) / 2
@@ -81,6 +102,12 @@ def generate_darcy(config):
     x_next = latents.to(torch.float64) * sigma_t_steps[0]
     known_index_a = random_index(500, 128, seed=1)
     known_index_u = random_index(500, 128, seed=0)
+
+    known_index_a = grid_index(500, 128)
+    known_index_u = grid_index(500, 128)
+
+    known_index_a = clustered_index(500, 128, cluster_center=(32, 32))
+    known_index_u = clustered_index(500, 128, cluster_center=(96, 96))
     
     ############################ Sample the data ############################
     for i, (sigma_t_cur, sigma_t_next) in tqdm.tqdm(list(enumerate(zip(sigma_t_steps[:-1], sigma_t_steps[1:]))), unit='step'): # 0, ..., N-1
@@ -137,3 +164,7 @@ def generate_darcy(config):
     u_final = u_final.detach().cpu().numpy()
     scipy.io.savemat('darcy_results.mat', {'a': a_final, 'u': u_final})
     print('Done.')
+
+    plt.imshow(a_final.squeeze())
+    plt.colorbar()
+    plt.show()
