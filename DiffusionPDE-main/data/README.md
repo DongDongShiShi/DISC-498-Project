@@ -1,32 +1,62 @@
-# DISC-498-Project
+# DISC-498-Project: Data Instructions
 
-# Diffusion for PDE 
+This project uses training and testing data from the *Diffusion* paper and *PDEBench*.
 
-Jiuzhou Chen， Dongwei Shi
-![DiffusionPDE](doc/PDEdatavisu.jpg)
-(figure from [PDEBench Paper](https://proceedings.neurips.cc/paper_files/paper/2022/file/0a9747136d411fb83f0cf81820d44afb-Paper-Datasets_and_Benchmarks.pdf) given by Takamoto et.al.)
+## Data Sources
 
-## Data Generation
+- **Darcy Flow, Poisson Equation, and Burgers' Equation**
+  - **Training Data:** [Download Link](https://drive.google.com/file/d/1z4ypsU3JdkAsoY9Px-JSw9RS2f5StNv5/view?usp=sharing)
+  - **Testing Data:** [Download Link](https://drive.google.com/file/d/1HdkeCKMLvDN_keIBTijOFYrRcA3Quy0l/view?usp=sharing)
 
-All training and test datasets can be downloaded from [PDEBench Github](https://github.com/pdebench/PDEBench) and link of [dataset]( https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-2986)
+- **Other PDEs (ReacDiff, Advection) (from PDEBench)**
+  - **All Data:** [Download Link](https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-2986)
 
-A formal table to summarize PDE types and grids from PDE Bench Paper：
+## Data Format
 
-![DiffusionPDE](doc/PDEdataTable.jpg)
+All datasets are stored in the format `[M, X, Y]`, where:
+- `M` = number of samples,
+- `X`, `Y` = resolution dimensions for each sample.
 
-## Train Diffusion Models
+## Setup Instructions
 
+1. Download the datasets from the links above.
+2. Unzip all downloaded files.
+3. Place all extracted folders inside the `data/` directory of this project.
 
-## Forward and Backward Simulation Problem
+The folder structure should look like:
 
+```
+data/
+├── training/
+├── testing/
+├── pdebench_data/
+│   ├── advection/
+│   ├── reacdiff/
+│   └── ...
+```
 
-### ODE/PDE Discovery Problem
-One potential goal of our project is, given PDE data (possibly with only partial observations available), to discover the underlying physical law (the PDE), particularly identifying the differential terms and their corresponding coefficients. Specifically, we aim to explore whether existing methods can be extended to handle scenarios with varying coefficients.
+4. Run the `merge_data.py` script to convert all datasets into `.npy` files.
 
+After running `merge_data.py`, the folder structure will be:
 
+```
+data/
+├── darcy_merge/
+│   ├── darcy_train.npy
+│   ├── darcy_test.npy
+├── poisson_merge/
+│   ├── poisson_train.npy
+│   ├── poisson_test.npy
+├── burgers_merge/
+│   ├── burgers_train.npy
+│   ├── burgers_test.npy
+├── pdebench_data/
+│   ├── advection/
+│   ├── reacdiff/
+│   └── ...
+```
 
+## Notes
 
-## License
-
-
-
+- Ensure that all datasets are placed correctly before running training or evaluation scripts.
+- `merge_data.py` must be executed once after downloading to generate the `.npy` files required by the training pipeline.
