@@ -1,96 +1,108 @@
-# DiffusionPDE: Generative PDE-Solving Under Partial Observation | NeurIPS 2024
 
-### [Project Page](https://jhhuangchloe.github.io/Diffusion-PDE/) | [Paper](https://arxiv.org/abs/2406.17763)
+# Diffusion model on PDES
 
-Official PyTorch implementation.<br>
-**DiffusionPDE: Generative PDE-Solving Under Partial Observation**<br>
-Jiahe Huang, Guandao Yang, Zichen Wang, Jeong Joon Park<br>
-University of Michigan<br>
-Stanford University<br>
-![DiffusionPDE](docs/architecture.jpg)
+This project implements a generative PDE-solving approach for Darcy Flow using diffusion models, inspired by the DiffusionPDE method presented at NeurIPS 2024.
 
-## Requirements
+## Project Description
 
-Python libraries: See [environment.yml](environment.yml) for library dependencies. The conda environment can be set up using these commands:
+We address the challenge of solving partial differential equations (PDEs) under sparse observations.  
+Rather than relying solely on supervised learning or physics-informed loss functions, we use a pre-trained diffusion model to sample complete solutions guided by partial observations and PDE constraints.
 
-```.bash
-conda env create -f environment.yml -n DiffusionPDE
-conda activate DiffusionPDE
+Specifically for Darcy Flow:
+- The goal is to recover both the **coefficient field** (permeability) and the **solution field** (pressure) given very limited measurement points.
+- During training, the model learns the joint distribution of Darcy coefficients and solutions from full data.
+- During inference, we guide the generative process using sparse observations and enforce PDE residuals through physics-based guidance.
+
+Our method enables high-quality reconstruction even when observations are random, grid-based, or concentrated.
+
+## Data Source
+
+- Raw training data is stored in `.mat` files under `data/training/darcy/`.
+- Each `.mat` file contains:
+  - `thresh_a_data`: Darcy coefficient fields.
+  - `thresh_p_data`: Darcy solution fields.
+- Each sample is a 2D field of size `(128, 128)`.
+- `merge_data.py` transforms and normalizes the raw data into `.npy` files stored under `data/Darcy-merged/`.
+
+## Required Packages
+
+Here is the exact environment specification:
+
+```yaml
+name: Diffusion_498
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - python>=3.8, <3.10
+  - pip
+  - numpy>=1.20
+  - click>=8.0
+  - pillow>=8.3.1
+  - scipy>=1.7.1
+  - pytorch=1.12.1
+  - psutil
+  - requests
+  - tqdm
+  - imageio
+  - pip:
+    - imageio-ffmpeg>=0.4.3
+    - pyspng
+    - pyyaml
 ```
 
-## Data Generation
+To create and activate the environment:
 
-All training datasets can be downloaded from [here](https://drive.google.com/file/d/1z4ypsU3JdkAsoY9Px-JSw9RS2f5StNv5/view?usp=sharing) and all test datasets can be downloaded from [here](https://drive.google.com/file/d/1HdkeCKMLvDN_keIBTijOFYrRcA3Quy0l/view?usp=sharing). Unzip the ``training.zip`` folder and the ``testing.zip`` folder in the ``data/`` directory. You can also directly access data files [here](https://drive.google.com/drive/folders/1YbTCcBE6HlUuYNGuf2QVGfbmfTOi3_My?usp=sharing).
-
-Datasets of Darcy Flow, Poisson equation, and Helmholtz equation are of the shape [N, X, Y], where N is the number of instances, and X, Y are spatial resolutions. Datasets of non-bounded and bounded Navier-Stokes equation are of the shape [N, X, Y, T] where T is the number of time steps. Datasets of Burgers' equation are of the shape [N, X, T].
-
-Data generation codes for bounded Navier Stokes equation are derived from [2D Fliud Simulator](https://github.com/takah29/2d-fluid-simulator), and codes for other PDEs are available in the ``dataset_generation`` folder. Specifically, we implemented our data generation over [FNO](https://neuraloperator.github.io/neuraloperator/dev/index.html) and modified the code to introduce more finite difference methods for the Poisson equation and the Helmholtz equation.
-
-## Train Diffusion Models
-
-All pre-trained models can be downloaded from [here](https://drive.google.com/file/d/1w4V0o-nTjpHP_Xv32Rt_SgPGmVa9PwL_/view?usp=sharing). Unzip the ``pretrained-models.zip`` in the root directory.
-
-Our training script is derived from [EDM](https://github.com/NVlabs/edm). To train a new diffusion model on the joint distribution, use, e.g.,
-
-```python
-# Prepare the .npy files for training. 
-# Raw data in the datasets should be scaled to (-1, 1).
-python3 merge_data.py # Darcy Flow
-
-# Train the diffusion model.
-torchrun --standalone --nproc_per_node=3 train.py --outdir=pretrained-darcy-new --data=/data/Darcy-merged/ --cond=0 --arch=ddpmpp --batch=60 --batch-gpu=20 --tick=10 --snap=50 --dump=100 --duration=20 --ema=0.05
+```bash
+conda env create -f environment.yml -n Diffusion_cse498
+conda activate Diffusion_cse498
 ```
 
-## Solve Forward Problem
+Or manually install:
 
-To solve the forward problem with sparse observation on the coefficient (or initial state) space, use, e.g.,
-
-```python
-python3 generate_pde.py --config configs/darcy-forward.yaml
+```bash
+pip install numpy click pillow scipy torch psutil requests tqdm imageio imageio-ffmpeg pyspng pyyaml
 ```
 
-### Solve Inverse Problem
+## Instructions to Run the Code
 
-To solve the inverse problem with sparse observation on the solution (or final state) space, use, e.g.,
+### 1. Preprocess Data
 
-```python
-python3 generate_pde.py --config configs/darcy-inverse.yaml
+Process raw `.mat` data into `.npy` training samples:
+
+```bash
+python merge_data.py
 ```
 
-## Recover Both Spaces With Observation On Both Sides
+This generates `data/Darcy-merged/` containing about 50,000 `.npy` samples.
 
-To simultaneously solve coefficient (initial state) space and solution (final state) space with sparse observations on both sides, use, e.g.,
+### 2. Train the Diffusion Model
 
-```python
-python3 generate_pde.py --config configs/darcy.yaml
+Train a new diffusion model:
+
+```bash
+python train.py --outdir pretrained-darcy-new --data data/Darcy-merged/ --cond 0 --arch ddpmpp --batch 60 --batch-gpu 20 --tick 10 --snap 50 --dump 100 --duration 20 --ema 0.05
 ```
 
-## Solve Solution Over Time
+- `--outdir`: Where trained models are saved.
+- `--data`: Preprocessed `.npy` dataset path.
+- `--duration`: Number of thousands of images to train on.
 
-To recover the solution throughout a time interval with sparse sensors, use, e.g.,
+### 3. Solve PDEs with Sparse Observations
 
-```python
-python3 generate_pde.py --config configs/burgers.yaml
+Use the trained model for PDE generation:
+
+```bash
+python generate_pde.py --config config/darcy-forward.yaml
 ```
 
-## License
+This will:
+- Load the pretrained model.
+- Apply sparse observation masks.
+- Generate full coefficient and solution fields.
+- Save results to output `.mat` files.
 
-<p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><span property="dct:title">DiffusionPDE: Generative PDE-Solving Under Partial Observation</span> by <span property="cc:attributionName">Jiahe Huang, Guandao Yang, Zichen Wang, Jeong Joon Park</span> is licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International</a>.</p>
+Modify `generate_pde.py` to experiment with different sampling patterns (random, grid, clustered).
 
-``dnnlib, torch_utils, training`` folders, and ``train.py`` are derived from the [codes](https://github.com/NVlabs/edm) by Tero Karras, Miika Aittala, Timo Aila, and Samuli Laine. The codes were originally shared under the [Attribution-NonCommercial-ShareAlike 4.0 International License](https://github.com/NVlabs/edm/blob/main/LICENSE.txt).
 
-Data generation codes for Darcy Flow, Burgers' equation, and non-bounded Navier-Stokes equation are derived from the [codes](https://neuraloperator.github.io/neuraloperator/dev/index.html) by  Zongyi Li, Nikola Kovachki, Kamyar Azizzadenesheli, Burigede Liu, Kaushik Bhattacharya, Andrew Stuart, and Anima Anandkumar. The codes were originally shared under the [MIT license](https://github.com/neuraloperator/neuraloperator/blob/main/LICENSE).
-
-## Citation
-
-```bibtex
-@misc{huang2024diffusionpdegenerativepdesolvingpartial,
-      title={DiffusionPDE: Generative PDE-Solving Under Partial Observation}, 
-      author={Jiahe Huang and Guandao Yang and Zichen Wang and Jeong Joon Park},
-      year={2024},
-      eprint={2406.17763},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-      url={https://arxiv.org/abs/2406.17763}, 
-}
-```
+---
