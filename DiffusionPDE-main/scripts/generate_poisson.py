@@ -19,6 +19,27 @@ def random_index(k, grid_size, seed=0, device=torch.device('cuda')):
         mask[i] = 1
     return mask
 
+def grid_index(k, grid_size, device=torch.device('cuda')):
+    '''Select roughly k points uniformly in a grid pattern.'''
+    stride = int((grid_size**2 / k)**0.5)
+    mask = torch.zeros((grid_size, grid_size), dtype=torch.float32).to(device)
+    for i in range(0, grid_size, stride):
+        for j in range(0, grid_size, stride):
+            mask[i, j] = 1
+    return mask
+
+def clustered_index(k, grid_size, cluster_center=(32, 32), cluster_std=10, device=torch.device('cuda')):
+    '''Select k points concentrated around a cluster center.'''
+    mask = torch.zeros((grid_size, grid_size), dtype=torch.float32).to(device)
+    np.random.seed(0)
+    x = np.random.normal(cluster_center[0], cluster_std, size=k)
+    y = np.random.normal(cluster_center[1], cluster_std, size=k)
+    x = np.clip(x, 0, grid_size-1).astype(int)
+    y = np.clip(y, 0, grid_size-1).astype(int)
+    for i in range(k):
+        mask[x[i], y[i]] = 1
+    return mask
+
 def get_poisson_loss(a, u, a_GT, u_GT, a_mask, u_mask, device=torch.device('cuda')):
     """Return the loss of the Poisson equation and the observation loss."""
     S = u.size(2)
@@ -136,3 +157,13 @@ def generate_poisson(config):
     u_final = u_final.detach().cpu().numpy()
     scipy.io.savemat('poisson_results.mat', {'a': a_final, 'u': u_final})
     print('Done.')
+
+    plt.imshow(a_final.squeeze())
+    plt.title('genearted_a_steps')
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow(x_final.squeeze())
+    plt.title('genearted_u_steps')
+    plt.colorbar()
+    plt.show()
