@@ -103,11 +103,11 @@ def generate_darcy(config):
     known_index_a = random_index(500, 128, seed=1)
     known_index_u = random_index(500, 128, seed=0)
 
-    known_index_a = grid_index(500, 128)
-    known_index_u = grid_index(500, 128)
+    # known_index_a = grid_index(500, 128)
+    # known_index_u = grid_index(500, 128)
 
-    known_index_a = clustered_index(500, 128, cluster_center=(32, 32))
-    known_index_u = clustered_index(500, 128, cluster_center=(96, 96))
+    # known_index_a = clustered_index(500, 128, cluster_center=(32, 32))
+    # known_index_u = clustered_index(500, 128, cluster_center=(96, 96))
     
     ############################ Sample the data ############################
     for i, (sigma_t_cur, sigma_t_next) in tqdm.tqdm(list(enumerate(zip(sigma_t_steps[:-1], sigma_t_steps[1:]))), unit='step'): # 0, ..., N-1
